@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Assistant</title>
+<style>
+:root{--bg:#E9EEF0;--panel:#F7F9FA;--card:#fff;--ink:#12222B;--mute:#5B6B75;--line:#D3DCE0;--acc:#0B6B83;--accfg:#fff;--amber:#B87414;--amberbg:#FFF3DD;--red:#B3382C;--green:#2E7D5B}
+@media(prefers-color-scheme:dark){:root{--bg:#10181D;--panel:#16222A;--card:#1D2C36;--ink:#E6EEF2;--mute:#93A5B0;--line:#2B3D48;--acc:#4CB6D1;--accfg:#08222B;--amber:#E8A33D;--amberbg:#33270F;--red:#E8776B;--green:#58C497}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:15px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:17px;margin:0;font-weight:650}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ghost{background:none;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 12px}
+main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 310px}
+#chat{display:flex;flex-direction:column;min-height:0;min-width:0}
+#log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:min(560px,86%);padding:9px 13px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.bot{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+.usr{background:var(--acc);color:var(--accfg);border-bottom-right-radius:4px;align-self:flex-end}
+.esc{background:var(--amberbg);border:1px solid var(--amber);border-left-width:5px}
+#chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 10px}
+#chips button{background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:5px 12px;font-size:13px}
+#f{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--panel)}
+#in{flex:1;min-width:0;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+#f button{background:var(--acc);color:var(--accfg);border:0;border-radius:10px;padding:0 18px;font-weight:600}
+#panel{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:14px 16px;min-height:0}
+#panel summary{font-weight:650;cursor:pointer;margin-bottom:10px}
+.row{margin-bottom:14px}
+.row b{display:block;font-size:13px;color:var(--mute);font-weight:600;margin-bottom:3px}
+.bar{height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0;background:var(--acc);border-radius:3px}
+.hit{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-top:6px}
+.hit+.bar{margin-top:2px}
+.mood{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--line) 50%,var(--green));position:relative}
+.mood i{position:absolute;top:-3px;width:4px;height:14px;background:var(--ink);border-radius:2px;left:50%}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);max-width:420px;width:92%}
+dialog label{display:block;margin:10px 0 4px;font-size:13px;color:var(--mute)}
+dialog input{width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+dialog p{font-size:13px;color:var(--mute)}
+#vbar{display:flex;align-items:center;gap:10px;padding:8px 18px 0;flex-wrap:wrap}
+#vbar button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:6px 14px;font-weight:600}
+#vbar button[aria-pressed=true]{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+#vbar button{display:inline-flex;align-items:center;gap:7px}
+#f #mic{background:var(--card);color:var(--ink);border:1px solid var(--line);padding:0 13px;display:flex;align-items:center}
+#f #mic[aria-pressed=true]{background:var(--acc);color:var(--accfg);border-color:var(--acc);animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(11,107,131,.45)}100%{box-shadow:0 0 0 10px rgba(11,107,131,0)}}
+@media(prefers-reduced-motion:reduce){#f #mic{animation:none!important}}
+#vbar button:disabled,#f #mic:disabled{opacity:.5;cursor:not-allowed}
+#vbar select{font:inherit;font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+#vs{font-size:13px;color:var(--mute)}
+@media(max-width:800px){main{grid-template-columns:1fr;grid-template-rows:1fr auto}#panel{border-left:0;border-top:1px solid var(--line);max-height:42vh}}
+</style>
+</head>
+<body>
+<header><h1>Support Assistant</h1><button class="ghost" id="cfg">AI backends</button></header>
+<main>
+<section id="chat">
+<div id="log" aria-live="polite"></div>
+<div id="chips"></div>
+<div id="vbar"><button id="vb" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="vbt">Voice mode: off</span></button><select id="vl" aria-label="Speaking language"><option value="en-IN">English</option><option value="hi-IN">Hindi</option><option value="te-IN">Telugu</option><option value="es-ES">Spanish</option><option value="fr-FR">French</option></select><span id="vs" role="status"></span></div>
+<form id="f"><input id="in" placeholder="Ask about orders, returns, payments…" autocomplete="off" aria-label="Your message"><button type="button" id="mic" aria-pressed="false" aria-label="Turn voice mode on or off" title="Voice mode"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button>Send</button></form>
+</section>
+<details id="panel" open>
+<summary>How the last reply was made</summary>
+<div class="row"><b>Language</b><span id="pL">–</span></div>
+<div class="row"><b>Customer mood</b><div class="mood"><i id="pM"></i></div><span id="pMt">–</span></div>
+<div class="row"><b>Matched topics (TF-IDF)</b><div id="pH">–</div></div>
+<div class="row"><b>Answered by</b><span id="pB">–</span></div>
+<div class="row"><b>Human handoff</b><span id="pE">Not needed</span></div>
+</details>
+</main>
+<dialog id="dlg"><form method="dialog">
+<h2 style="margin-top:0;font-size:16px">AI backends</h2>
+<p>Tried in order: Groq, OpenAI, Ollama, then the built-in answers. Leave blank to skip. Keys stay in this tab only and go only to the provider you fill in.</p>
+<label for="kG">Groq API key</label><input id="kG" type="password" autocomplete="off">
+<label for="kO">OpenAI API key</label><input id="kO" type="password" autocomplete="off">
+<label for="kU">Ollama URL (e.g. http://localhost:11434)</label><input id="kU">
+<label for="kM">Ollama model</label><input id="kM" value="llama3.2">
+<div style="margin-top:14px;text-align:right"><button class="ghost">Done</button></div>
+</form></dialog>
+
+<script>
+// ---------- Knowledge base (multilingual keywords help retrieval for es/fr/hi/te) ----------
+const KB=[
+{t:"Track an order",k:"track tracking status where shipped delivery arrive seguimiento pedido dónde suivi commande ट्रैक ऑर्डर कहाँ ఆర్డర్ ఎక్కడ",a:"Open Orders in your account and tap Track, or use the link in your shipping email. Tracking appears within 24 hours of dispatch. If it hasn't moved in 3 days, send me your order number and I'll escalate it."},
+{t:"Shipping times and cost",k:"shipping ship delivery time days cost fee express envío livraison शिपिंग",a:"Standard shipping takes 3–5 business days (free over ₹999). Express takes 1–2 days for ₹149. Orders placed before 2 pm ship the same day."},
+{t:"Return an item",k:"return send back exchange devolver devolución retourner वापस",a:"You can return unused items within 30 days. Go to Orders → Return item, print the prepaid label, and hand the parcel to any courier point."},
+{t:"Refunds",k:"refund money back reimbursement reembolso remboursement पैसे वापस रिफंड",a:"Refunds go to your original payment method 5–7 business days after we receive the return. Shipping fees are refunded only if the item was faulty."},
+{t:"Cancel an order",k:"cancel cancellation stop order cancelar annuler रद्द",a:"You can cancel from Orders until the order is dispatched. After dispatch, refuse the delivery or start a return instead."},
+{t:"Reset password or log in",k:"password login log sign account forgot reset contraseña cambiar mot passe पासवर्ड",a:"Choose Forgot password on the login page, enter your email, and use the reset link (valid for 30 minutes). Check spam if it doesn't arrive."},
+{t:"Payments",k:"payment pay card upi wallet failed charged declined pago paiement भुगतान",a:"We accept cards, UPI, net banking and wallets. If a payment failed but money left your account, it is reversed automatically within 3–5 business days."},
+{t:"Damaged or wrong item",k:"damaged broken wrong defective missing faulty dañado cassé खराब",a:"Sorry about that. From Orders → Report a problem, upload a photo of the item and packaging within 7 days and we'll send a replacement or refund you."},
+{t:"Warranty",k:"warranty guarantee repair defect garantía garantie वारंटी",a:"Electronics carry a 12-month warranty against manufacturing defects. Keep your invoice and use Orders → Claim warranty."},
+{t:"Contact and support hours",k:"contact hours open phone call email support available horario horaires",a:"Live agents are available 9 am–9 pm IST, Monday to Saturday. This assistant answers at any time."},
+{t:"Promo codes",k:"promo coupon code discount offer voucher cupón réduction कूपन",a:"Enter the code at checkout under Apply coupon. Codes can't be combined and expire on the date shown. If a valid code is rejected, check the minimum order value."}
+];
+const STOP=new Set("a an the is are was be to of in on for and or my i me it do does can how what when where with you your this that at as by from if not no please".split(" "));
+const tok=s=>(s.toLowerCase().match(/[\p{L}\p{M}\p{N}]+/gu)||[]).filter(w=>!STOP.has(w)).map(w=>w.length>4?w.replace(/(ing|ed|es|s)$/,""):w);
+const docs=KB.map(e=>tok(`${e.t} ${e.t} ${e.k} ${e.k} ${e.a}`));
+const df={};docs.forEach(d=>new Set(d).forEach(w=>df[w]=(df[w]||0)+1));
+const idf=w=>Math.log((KB.length+1)/((df[w]||0)+1))+1;
+const vec=ts=>{const v={};ts.forEach(w=>v[w]=(v[w]||0)+1);let n=0;for(const w in v){v[w]*=idf(w);n+=v[w]**2}n=Math.sqrt(n)||1;for(const w in v)v[w]/=n;return v};
+const dv=docs.map(vec);
+const search=q=>{const v=vec(tok(q));return dv.map((d,i)=>{let s=0;for(const w in v)if(d[w])s+=v[w]*d[w];return{i,s}}).sort((a,b)=>b.s-a.s).slice(0,3)};
+const MIN=.12;
+
+// ---------- Sentiment (small VADER-style lexicon) ----------
+const LEX={good:1.9,great:3.1,love:3.2,thanks:1.9,thank:1.5,happy:2.7,perfect:2.7,helpful:1.8,awesome:3.1,excellent:2.7,bad:-2.5,terrible:-3.4,awful:-3.1,worst:-3.1,angry:-2.3,furious:-3.3,hate:-2.7,useless:-2.3,broken:-2.1,late:-1.5,slow:-1.4,rude:-2.5,scam:-3,fraud:-3.2,disappointed:-2.3,annoyed:-2,frustrated:-2.4,unacceptable:-2.6,wrong:-2.1,damaged:-2.2,missing:-1.6,problem:-1.7,issue:-1.2,ridiculous:-2.4,stupid:-2.5,lost:-1.8,stuck:-1.5};
+const NEG=new Set(["not","no","never","isn't","don't","didn't","can't","won't","hardly","without"]);
+const BOOST={very:.293,really:.293,extremely:.4,so:.2,totally:.3,absolutely:.4,completely:.3};
+function sentiment(t){t=t.replace(/’/g,"'");const ws=t.match(/[\p{L}']+/gu)||[];let s=0;
+ ws.forEach((w,i)=>{const l=w.toLowerCase();let v=LEX[l];if(v===undefined)return;
+  if(w===w.toUpperCase()&&w.length>2)v+=v>0?.733:-.733;
+  for(let j=1;j<=3&&i-j>=0;j++){const p=ws[i-j].toLowerCase();if(BOOST[p])v+=Math.sign(v)*BOOST[p];if(NEG.has(p)){v*=-.74;break}}
+  s+=v});
+ s+=Math.sign(s)*Math.min((t.match(/!/g)||[]).length,4)*.292;
+ return +(s/Math.sqrt(s*s+15)).toFixed(2)}
+
+// ---------- Language detection (script first, then stopwords with a confidence margin) ----------
+const LN={en:"English",es:"Spanish",fr:"French",de:"German",hi:"Hindi",te:"Telugu",ta:"Tamil",ar:"Arabic",zh:"Chinese"};
+const SCR=[["te",/[\u0C00-\u0C7F]/],["hi",/[\u0900-\u097F]/],["ta",/[\u0B80-\u0BFF]/],["ar",/[\u0600-\u06FF]/],["zh",/[\u4E00-\u9FFF]/]];
+const SW={en:"the is are and to my i it of for with what how where when do you can not this".split(" "),
+es:"el la los las de que y en un una por con para es mi pedido hola gracias donde cuando quiero se me".split(" "),
+fr:"le la les des et en un une pour avec est mon ma commande bonjour merci où quand je veux pas ne me".split(" "),
+de:"der die das und ist ein eine mit für ich meine bestellung hallo danke wo wann nicht".split(" ")};
+function lang(t){for(const[l,r]of SCR)if(r.test(t))return l;
+ const w=t.toLowerCase().match(/\p{L}+/gu)||[];if(w.length<3)return"en";
+ const sc=Object.entries(SW).map(([l,a])=>[l,w.filter(x=>a.includes(x)).length]).sort((a,b)=>b[1]-a[1]);
+ return sc[0][1]>=2&&sc[0][1]-sc[1][1]>=1?sc[0][0]:"en"}
+const UI={
+en:{hi:"Hi! What can I help you with today?",fb:"Sorry, I couldn't find a precise answer. Could you give me a few more details?",esc:"I'm connecting you with a support agent. Your ticket: ",note:""},
+es:{hi:"¡Hola! ¿En qué puedo ayudarte?",fb:"Lo siento, no encontré una respuesta exacta. ¿Puedes darme más detalles?",esc:"Te conecto con un agente de soporte. Tu ticket: ",note:"\n\n(Respuesta en inglés. Añade una clave de IA en «AI backends» para traducir.)"},
+fr:{hi:"Bonjour ! Comment puis-je vous aider ?",fb:"Désolé, je n'ai pas trouvé de réponse précise. Pouvez-vous donner plus de détails ?",esc:"Je vous mets en relation avec un agent. Votre ticket : ",note:"\n\n(Réponse en anglais. Ajoutez une clé IA dans « AI backends » pour traduire.)"},
+hi:{hi:"नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?",fb:"माफ़ कीजिए, मुझे इसका सटीक उत्तर नहीं मिला। कृपया थोड़ा और विवरण दें।",esc:"मैं आपको हमारे सहायता एजेंट से जोड़ रहा हूँ। आपका टिकट: ",note:"\n\n(उत्तर अंग्रेज़ी में है। अनुवाद के लिए «AI backends» में AI कुंजी जोड़ें।)"},
+te:{hi:"నమస్కారం! నేను మీకు ఎలా సహాయపడగలను?",fb:"క్షమించండి, దీనికి సరైన సమాధానం దొరకలేదు. దయచేసి మరిన్ని వివరాలు ఇవ్వండి.",esc:"నేను మిమ్మల్ని మా సపోర్ట్ ఏజెంట్‌కు కనెక్ట్ చేస్తున్నాను. మీ టికెట్: ",note:"\n\n(సమాధానం ఇంగ్లీష్‌లో ఉంది. అనువాదం కోసం «AI backends»లో AI కీ జోడించండి.)"}};
+const T=(l,k)=>(UI[l]||UI.en)[k];
+
+// ---------- LLM chain: Groq -> OpenAI -> Ollama -> built-in ----------
+const $=id=>document.getElementById(id);
+async function chat(url,key,model,msgs){
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",...(key&&{Authorization:"Bearer "+key})},body:JSON.stringify({model,messages:msgs,temperature:.3,max_tokens:350}),signal:AbortSignal.timeout(15000)});
+ if(!r.ok)throw new Error(r.status);const d=await r.json();return d.choices[0].message.content.trim()}
+function backends(){const b=[];
+ if($("kG").value.trim())b.push(["Groq",()=>["https://api.groq.com/openai/v1/chat/completions",$("kG").value.trim(),"llama-3.3-70b-versatile"]]);
+ if($("kO").value.trim())b.push(["OpenAI",()=>["https://api.openai.com/v1/chat/completions",$("kO").value.trim(),"gpt-4o-mini"]]);
+ if($("kU").value.trim())b.push(["Ollama",()=>[$("kU").value.trim().replace(/\/$/,"")+"/v1/chat/completions","",$("kM").value.trim()||"llama3.2"]]);
+ return b}
+
+// ---------- Conversation state ----------
+const hist=[],ctx={topic:null,order:null,low:0,neg:0};
+const log=$("log");
+function bubble(text,cls){const d=document.createElement("div");d.className="m "+cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+
+async function handle(text){
+ bubble(text,"usr");$("chips").hidden=true;
+ const L=lang(text),S=sentiment(text),od=text.match(/\b\d{5,}\b/);if(od)ctx.order=od[0];
+ const typing=bubble("…","bot");
+ if(/^\s*(hi|hello|hey|hola|bonjour|hallo|नमस्ते|నమస్కారం)\b/i.test(text)&&text.trim().split(/\s+/).length<=3){
+  typing.textContent=T(L,"hi");speak(T(L,"hi"),L);hist.push({role:"user",content:text},{role:"assistant",content:typing.textContent});return panel(L,S,[],"Built-in greeting",null,false)}
+ let hits=search(text),usedCtx=false;
+ if(hits[0].s<MIN&&ctx.topic!==null&&tok(text).length<=6){hits=search(KB[ctx.topic].t+" "+text);usedCtx=true}
+ const ok=hits[0].s>=MIN;if(ok)ctx.topic=hits[0].i;
+ ctx.low=ok?0:ctx.low+1;ctx.neg=S<=-.35?ctx.neg+1:0;
+ const asked=/\b(human|agent|person|representative|manager|supervisor|lawyer)\b|एजेंट|humano|agente|conseiller|ఏజెంట్/i.test(text);
+ const why=asked?"You asked for a person":S<=-.6?"Very negative message":ctx.neg>=2?"Repeated frustration":ctx.low>=2?"Two questions in a row unanswered":null;
+ let ans=null,by="Built-in answers";
+ const context=hits.filter(h=>h.s>=MIN/2).map(h=>`${KB[h.i].t}: ${KB[h.i].a}`).join("\n");
+ const msgs=[{role:"system",content:`You are a concise, friendly customer support assistant. Answer ONLY from the context below. Reply in ${LN[L]||"the customer's language"}. Customer mood score: ${S} (-1 to 1); be extra empathetic if negative.${ctx.order?` Customer's order number: ${ctx.order}.`:""} If the context doesn't cover the question, say so and offer a human agent.\n\nContext:\n${context||"(nothing relevant found)"}`},...hist.slice(-6),{role:"user",content:text}];
+ for(const[name,cfg]of backends()){try{ans=await chat(...cfg(),msgs);by=name;break}catch(e){}}
+ if(!ans){ans=ok?KB[hits[0].i].a+(ctx.order&&hits[0].i===0?`\n\nI've noted order ${ctx.order} for the agent.`:"")+(L!=="en"?T(L,"note"):""):T(L,"fb")}
+ typing.textContent=ans;
+ {const sp=by.startsWith("Built-in")&&ok?[ans.replace(T(L,"note"),""),"en"]:[ans,L];speak(sp[0],sp[1])}
+ hist.push({role:"user",content:text},{role:"assistant",content:ans});
+ let ticket=null;
+ if(why){ticket="TKT-"+Math.random().toString(36).slice(2,8).toUpperCase();bubble(T(L,"esc")+ticket,"bot esc");speak(T(L,"esc")+ticket.slice(4).split("").join(" "),L);ctx.low=0;ctx.neg=0}
+ panel(L,S,hits,by+(usedCtx?" (used earlier topic)":""),why,!!ticket)}
+
+function panel(L,S,hits,by,why){
+ $("pL").textContent=LN[L]||L;
+ $("pM").style.left=`calc(${(S+1)*50}% - 2px)`;
+ $("pMt").textContent=`${S>.05?"Positive":S<-.05?"Negative":"Neutral"} (${S})`;
+ $("pH").innerHTML=hits.length?"":"–";
+ hits.forEach(h=>{const r=document.createElement("div");r.className="hit";r.innerHTML="<span></span><span></span>";r.children[0].textContent=KB[h.i].t;r.children[1].textContent=h.s.toFixed(2);
+  const b=document.createElement("div");b.className="bar";b.innerHTML=`<i style="left:0;width:${Math.min(100,h.s*160)}%"></i>`;$("pH").append(r,b)});
+ $("pB").textContent=by;
+ $("pE").textContent=why?"Yes: "+why:"Not needed";$("pE").style.color=why?"var(--amber)":""}
+
+// ---------- Voice mode (Web Speech API): listen -> reply -> speak -> listen ----------
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition,TTS=window.speechSynthesis;
+const VL={en:"en-IN",es:"es-ES",fr:"fr-FR",de:"de-DE",hi:"hi-IN",te:"te-IN",ta:"ta-IN",ar:"ar-SA",zh:"zh-CN"};
+let voice=false,busy=false,spoken=0,rec=null;
+const status=t=>$("vs").textContent=t;
+function stopRec(){if(rec){rec.onend=rec.onresult=rec.onerror=null;try{rec.abort()}catch(e){}rec=null}}
+function speak(t,L){if(!voice||!TTS)return;spoken++;status("Speaking…");
+ const u=new SpeechSynthesisUtterance(t.replace(/\s*\n+\s*/g,". "));u.lang=VL[L]||"en-IN";
+ u.onend=u.onerror=()=>{spoken=Math.max(0,spoken-1);if(!spoken&&!busy)listen()};TTS.speak(u)}
+function listen(){if(!voice||busy||spoken||(TTS&&TTS.speaking))return;stopRec();
+ rec=new SR();rec.lang=$("vl").value;rec.interimResults=true;rec.maxAlternatives=1;
+ rec.onresult=e=>{const r=e.results[e.results.length-1];$("in").value=r[0].transcript;
+  if(r.isFinal){const v=r[0].transcript.trim();$("in").value="";stopRec();if(v)send(v);else listen()}};
+ rec.onerror=e=>{if(["not-allowed","service-not-allowed"].includes(e.error)){setVoice(false);
+  bubble("Microphone access is blocked. Allow the microphone for this page in your browser's site settings, then turn voice mode on again.","bot")}};
+ rec.onend=()=>{if(voice&&!busy&&!spoken)setTimeout(listen,300)};
+ try{rec.start();status("Listening…")}catch(e){setTimeout(listen,500)}}
+function setVoice(on){voice=on;$("vb").setAttribute("aria-pressed",on);$("mic").setAttribute("aria-pressed",on);$("vbt").textContent="Voice mode: "+(on?"on":"off");
+ if(on){listen()}else{stopRec();if(TTS)TTS.cancel();spoken=0;status("");$("in").value=""}}
+async function send(text){busy=true;status("Thinking…");try{await handle(text)}finally{busy=false;if(voice&&!spoken)listen()}}
+$("vb").onclick=$("mic").onclick=()=>setVoice(!voice);
+$("vl").onchange=()=>{if(voice){stopRec();listen()}};
+if(!SR){$("vb").disabled=$("mic").disabled=true;status("Voice input isn't supported in this browser. Try Chrome, Edge or Safari.")}
+
+// ---------- Wiring ----------
+$("f").addEventListener("submit",e=>{e.preventDefault();const v=$("in").value.trim();if(v){$("in").value="";send(v)}});
+$("cfg").onclick=()=>$("dlg").showModal();
+["Where is my order?","How do I return an item?","My package arrived damaged","Quiero cambiar mi contraseña","ఆర్డర్ ఎక్కడ ఉంది?"].forEach(q=>{const b=document.createElement("button");b.textContent=q;b.onclick=()=>send(q);$("chips").appendChild(b)});
+if(innerWidth<800)$("panel").open=false;
+bubble("Hi! I can help with orders, returns, payments and accounts. Ask in English, Spanish, French, Hindi or Telugu.","bot");
+</script>
+</body>
+</html>
